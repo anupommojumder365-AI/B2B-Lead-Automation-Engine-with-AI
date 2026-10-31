@@ -1,0 +1,1328 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "b2b-lead-intake",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        -512
+      ],
+      "id": "43badaf0-eb4d-4681-8e64-772f0d1f3f3d",
+      "name": "Receive New Lead",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve incoming payload from Node 1\nconst items = $input.all();\n\nreturn items.map(item => {\n  const body = item.json.body || item.json;\n\n  // Generate date string (YYYYMMDD)\n  const now = new Date();\n  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, \"\");\n  \n  // Generate random 4-character alphanumeric hash\n  const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase();\n  \n  // Construct Unique Lead ID\n  const leadId = `LEAD-${dateStr}-${randomHash}`;\n  \n  return {\n    json: {\n      lead_id: leadId,\n      received_at: now.toISOString(),\n      system_source: body.lead_source || \"Website Intake Webhook\",\n      raw_data: body\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -656
+      ],
+      "id": "261e94ab-6d13-4cde-a4b1-19ac2902cbbe",
+      "name": "Generate Unique Lead ID & Metadata"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d36d896-474f-4be8-b3db-da10c1863c38",
+              "name": "lead_id",
+              "value": "={{ $json.lead_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5d622a8d-cac5-496a-8090-aea4b616a41c",
+              "name": "received_at",
+              "value": "={{ $json.received_at }}",
+              "type": "string"
+            },
+            {
+              "id": "548d9bb0-afb0-4abc-be10-bb1ee40013b0",
+              "name": "system_source",
+              "value": "={{ $json.system_source }}",
+              "type": "string"
+            },
+            {
+              "id": "c476155c-ee92-43fc-87e8-d4e371d8b640",
+              "name": "first_name",
+              "value": "={{ $json.raw_data.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "f19daf4f-5083-4448-bdb0-1513af364082",
+              "name": "last_name",
+              "value": "={{ $json.raw_data.last_name }}",
+              "type": "string"
+            },
+            {
+              "id": "8e01bf89-207c-4af5-95eb-313d052d0f5f",
+              "name": "email",
+              "value": "={{ $json.raw_data.email }}",
+              "type": "string"
+            },
+            {
+              "id": "1b8b628b-e7cd-4629-9f6d-9e7b620ec479",
+              "name": "phone",
+              "value": "={{ $json.raw_data.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "1a2656a3-1b0e-4e92-8997-b06b3d5caa64",
+              "name": "company_name",
+              "value": "={{ $json.raw_data.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "8017f560-495a-4791-9d67-1912555eb979",
+              "name": "company_website",
+              "value": "={{ $json.raw_data.company_website }}",
+              "type": "string"
+            },
+            {
+              "id": "9ffd2015-c933-4bea-98f7-9828cc78577a",
+              "name": "company_size",
+              "value": "={{ $json.raw_data.company_size }}",
+              "type": "string"
+            },
+            {
+              "id": "cd030cc7-048b-4311-91a0-cc0228097d7f",
+              "name": "job_title",
+              "value": "={{ $json.raw_data.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "016e8d4c-0aff-4752-874f-edfb370aff4a",
+              "name": "budget",
+              "value": "={{ $json.raw_data.budget }}",
+              "type": "string"
+            },
+            {
+              "id": "6649b0f0-ecf3-4a17-bdb1-eb8b1a2f5c24",
+              "name": "timeline",
+              "value": "={{ $json.raw_data.timeline }}",
+              "type": "string"
+            },
+            {
+              "id": "9dc6e2f1-647d-44a3-806a-08b4cad6d771",
+              "name": "service_needed",
+              "value": "={{ $json.raw_data.service_needed }}",
+              "type": "string"
+            },
+            {
+              "id": "c0ee49d3-3529-4e15-8b61-d686cc6e5024",
+              "name": "notes",
+              "value": "={{ $json.raw_data.notes }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        256,
+        -448
+      ],
+      "id": "47a9cef3-bcb0-4f81-8b05-3dedeec6fe7a",
+      "name": "Structure & Flatten Lead Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const data = item.json;\n\n  // Helper functions for string sanitization\n  const cleanText = (str) => str ? str.toString().trim() : \"\";\n  const capitalize = (str) => {\n    const cleaned = cleanText(str);\n    return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase() : \"\";\n  };\n\n  // 1. Lowercase and trim email\n  const cleanedEmail = cleanText(data.email).toLowerCase();\n\n  // 2. Format phone number (remove spaces, brackets, dashes, keep + and digits)\n  const rawPhone = cleanText(data.phone);\n  const cleanedPhone = rawPhone.replace(/[^\\d+]/g, '');\n\n  // 3. Format website URL\n  let website = cleanText(data.company_website).toLowerCase();\n  if (website && !website.startsWith('http://') && !website.startsWith('https://')) {\n    website = 'https://' + website;\n  }\n\n  // 4. Construct Clean Object\n  return {\n    json: {\n      ...data,\n      first_name: capitalize(data.first_name),\n      last_name: capitalize(data.last_name),\n      full_name: `${capitalize(data.first_name)} ${capitalize(data.last_name)}`.trim(),\n      email: cleanedEmail,\n      phone: cleanedPhone,\n      company_name: cleanText(data.company_name),\n      company_website: website,\n      job_title: cleanText(data.job_title),\n      data_normalized: true\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        -656
+      ],
+      "id": "e56893a1-09b0-429f-8f32-cc21768a17f9",
+      "name": "Normalize & Clean Lead Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// List of common free personal email providers\nconst freeEmailProviders = [\n  'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', \n  'aol.com', 'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com'\n];\n\nreturn items.map(item => {\n  const data = item.json;\n  const email = data.email || \"\";\n\n  // Standard Email Regex\n  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/;\n  const isValidEmail = emailRegex.test(email);\n\n  let emailDomain = \"\";\n  let isFreeEmail = false;\n\n  if (isValidEmail) {\n    emailDomain = email.split('@')[1].toLowerCase();\n    isFreeEmail = freeEmailProviders.includes(emailDomain);\n  }\n\n  return {\n    json: {\n      ...data,\n      is_valid_email: isValidEmail,\n      email_domain: emailDomain,\n      is_free_email: isFreeEmail,\n      is_business_email: isValidEmail && !isFreeEmail\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -656
+      ],
+      "id": "6e768297-26f2-49d9-8233-8c83a123b365",
+      "name": "Validate Email Regex & Extract Domain"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "04d08882-e941-49ae-9d25-a22fef93ae0d",
+              "leftValue": "={{ $json.is_valid_email }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "7fa1dd2b-fa95-4529-846b-2e1c680b19cb",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "fa14bd75-0ed1-491f-9087-bdc3fa61e578",
+              "leftValue": "={{ $json.first_name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -496
+      ],
+      "id": "88b481bb-6c1d-4b5f-907d-a5bb675d41d7",
+      "name": "Filter Invalid Lead Data"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f34ca0b7-303d-4b8f-8502-37f303224149",
+              "name": "lead_status",
+              "value": "INVALID_LEAD",
+              "type": "string"
+            },
+            {
+              "id": "270a580d-d0bd-4b34-9aca-7c6c6e0dc599",
+              "name": "rejection_reason",
+              "value": "Missing required fields or invalid email format",
+              "type": "string"
+            },
+            {
+              "id": "29a646bb-c828-499e-8818-37730d0137d9",
+              "name": "is_quarantined",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        672,
+        -320
+      ],
+      "id": "ab6cbda2-4c27-45c9-a0c2-6baabbe251cb",
+      "name": "Flag Invalid Lead Data"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "operation": "search",
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "value": "={{ $json.email }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -752
+      ],
+      "id": "c0866ce6-1bd7-4046-814d-72b1d9c32bc9",
+      "name": "Search HubSpot Contact by Email",
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotAppToken": {
+          "name": "HubSpot Service Key account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dbf71378-4969-4b3e-94ac-a7a1c4cfbc80",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1056,
+        -576
+      ],
+      "id": "ed9f6cc5-dd4d-4326-90d9-66f667bb62c1",
+      "name": "If: Contact Exists in CRM?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve original cleaned data from Node 6 (Filter Invalid Lead Data)\nconst originalData = $(\"Filter Invalid Lead Data\").first().json;\n\nreturn [{\n  json: {\n    ...originalData,\n    is_duplicate: false,\n    hubspot_contact_id: null,\n    lead_stage: \"NEW_UNQUALIFIED\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        -448
+      ],
+      "id": "058af4d4-72ff-4c0c-9357-059f522886c0",
+      "name": "Prepare New Lead Payload"
+    },
+    {
+      "parameters": {
+        "url": "=https://autocomplete.clearbit.com/v1/companies/suggest?query={{ $json.email_domain }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1472,
+        -448
+      ],
+      "id": "631b5b50-5eec-42a9-a266-bddca22f1c88",
+      "name": "Fetch Company Info",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve main lead payload from Node 10\nconst mainLead = $(\"Prepare New Lead Payload\").first().json;\n\n// Retrieve enriched company data from Node 11\nconst clearbitResult = $input.first()?.json || {};\n\nreturn [{\n  json: {\n    ...mainLead,\n    enriched_company_name: clearbitResult.name || mainLead.company_name,\n    enriched_company_domain: clearbitResult.domain || mainLead.email_domain,\n    enriched_company_logo: clearbitResult.logo || null,\n    is_enriched: clearbitResult.name ? true : false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        -448
+      ],
+      "id": "ae855172-3ec0-4c95-afae-b49d252c4e5d",
+      "name": "Merge Enriched Data"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are an expert B2B Lead Qualification AI. Analyze the following lead details and assign a lead score and tier based on ideal customer criteria.\n\nLead Information:\n- Full Name: {{ $json.full_name }}\n- Job Title: {{ $json.job_title }}\n- Company Name: {{ $json.enriched_company_name }}\n- Company Size: {{ $json.company_size }}\n- Budget: {{ $json.budget }}\n- Timeline: {{ $json.timeline }}\n- Service Needed: {{ $json.service_needed }}\n- Notes: {{ $json.notes }}\n\nReturn ONLY a raw JSON object with no markdown syntax, no quotes around the JSON block, and strictly adhering to this structure:\n{\n  \"lead_score\": 85,\n  \"lead_tier\": \"HOT\",\n  \"qualification_reason\": \"Decision-maker role (CMO), high budget ($5k-$10k), urgent timeline (30 days), and clear service fit.\",\n  \"recommended_action\": \"Assign to Senior Sales Rep immediately for booking a call.\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1856,
+        -688
+      ],
+      "id": "0b43d7b3-c6ab-48c0-8ea4-03110be7c5ea",
+      "name": "Qualify & Score Lead with AI",
+      "credentials": {
+        "openAiApi": {
+          "name": "OpenAI account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve enriched lead payload from Node 12\nconst mainLead = $(\"Merge Enriched Data\").first().json;\n\n// Retrieve raw text response from OpenAI (Node 13)\nconst aiResponseText = $input.first().json.output[0].content[0].text;\n\n// Parse string JSON to JS Object safely\nlet aiData = {};\ntry {\n  aiData = JSON.parse(aiResponseText);\n} catch (e) {\n  aiData = {\n    lead_score: 50,\n    lead_tier: \"WARM\",\n    qualification_reason: \"Failed to parse AI response.\",\n    recommended_action: \"Manual review required.\"\n  };\n}\n\nreturn [{\n  json: {\n    ...mainLead,\n    lead_score: aiData.lead_score || 0,\n    lead_tier: aiData.lead_tier || \"UNKNOWN\",\n    qualification_reason: aiData.qualification_reason || \"\",\n    recommended_action: aiData.recommended_action || \"\",\n    lead_stage: aiData.lead_tier === \"HOT\" ? \"SALES_READY\" : \"NURTURE\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        -464
+      ],
+      "id": "85604a42-7396-493e-bef6-aa2c86f55182",
+      "name": "Parse AI Response & Merge Lead Payload"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "70350a29-3901-4139-82b6-cf27f504bd45",
+              "leftValue": "={{ $json.lead_tier }}",
+              "rightValue": "HOT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2384,
+        -464
+      ],
+      "id": "4f5a024a-efd0-4406-aa95-0387cb2e721b",
+      "name": "If: Is Lead HOT?"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "email": "={{ $json.email }}",
+        "additionalFields": {
+          "companyName": "={{ $json.company_name }}",
+          "firstName": "={{ $json.first_name }}",
+          "lastName": "={{ $json.last_name }}",
+          "phoneNumber": "={{ $json.phone }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        2496,
+        -768
+      ],
+      "id": "293a57f1-1c12-4238-be0c-fc5904bace94",
+      "name": "Create Contact in HubSpot",
+      "credentials": {
+        "hubspotAppToken": {
+          "name": "HubSpot Service Key account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@example.com",
+        "subject": "=🔥 HOT Lead Alert: {{ $json.properties.hs_full_name_or_email.value }} from {{ $json.properties.company.value }}",
+        "emailType": "text",
+        "message": "=🚨 NEW HOT LEAD RECEIVED! 🚨\n\nLead Details:\n- Name: {{ $('If: Is Lead HOT?').item.json.full_name }}\n- Email: {{ $('If: Is Lead HOT?').item.json.email }}\n- Phone: {{ $('If: Is Lead HOT?').item.json.phone }}\n- Company: {{ $('If: Is Lead HOT?').item.json.company_name }}\n- AI Score: {{ $('Parse AI Response & Merge Lead Payload').item.json.lead_score }}/100 (Tier: {{ $('Parse AI Response & Merge Lead Payload').item.json.lead_tier }})\n\nAI Qualification Reason:\n{{ $('Parse AI Response & Merge Lead Payload').item.json.qualification_reason }}\n\nRecommended Action:\n{{ $('Parse AI Response & Merge Lead Payload').item.json.recommended_action }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2736,
+        -768
+      ],
+      "id": "b9112e03-a2ee-4b4b-ba07-e44994dd51c8",
+      "name": "Send Instant Sales Alert",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d8b9d9bc-c96f-42b3-8a85-df39deb8edad",
+              "leftValue": "={{ $('Parse AI Response & Merge Lead Payload').item.json.lead_tier }}",
+              "rightValue": "HOT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2624,
+        -288
+      ],
+      "id": "fa52d4fc-b613-4677-9a75-0dbeb344797a",
+      "name": "If: Is Lead WARM?"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Parse AI Response & Merge Lead Payload').item.json.email }}",
+        "subject": "=Exploring AI Automation for {{ $('Parse AI Response & Merge Lead Payload').item.json.company_name }}",
+        "emailType": "text",
+        "message": "=<p>Hi {{ $('Parse AI Response & Merge Lead Payload').item.json.first_name }},</p>\n\n<p>Thanks for reaching out! I noticed you're exploring {{ $('Parse AI Response & Merge Lead Payload').item.json.service_needed }}  options for {{ $('Parse AI Response & Merge Lead Payload').item.json.company_name }}.</p>\n\n<p>We regularly help teams in your industry optimize workflows and sync lead data seamlessly with CRM systems.</p>\n\n<p>Would you be open to a quick 10-minute ideas exchange next week to see how we can assist within your timeline ({{ $('Parse AI Response & Merge Lead Payload').item.json.timeline }})?</p>\n\n<p>Best regards,<br>Automation Team</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        -464
+      ],
+      "id": "b56d5d5b-1e69-4b8d-a57d-9a16bdd2268e",
+      "name": "Send Warm Nurture Email",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Parse AI Response & Merge Lead Payload').item.json.email }}",
+        "subject": "Thank you for contacting us!",
+        "message": "=<p>Hi {{ $('Parse AI Response & Merge Lead Payload').item.json.first_name }},</p>\n\n<p>Thank you for your interest in our services! We have received your inquiry regarding {{ $('Parse AI Response & Merge Lead Payload').item.json.service_needed }}.</p>\n\n<p>We will keep your details on file and reach out as soon as relevant resources or openings align with your requirements.</p>\n\n<p>Best regards,<br>Team</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2944,
+        -208
+      ],
+      "id": "1e7a52a3-a86e-43e0-a024-c2916acda90c",
+      "name": "Send Cold Courtesy Email",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "email": "={{ $('Normalize & Clean Lead Data').item.json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('Normalize & Clean Lead Data').item.json.first_name }}",
+          "lastName": "={{ $('Normalize & Clean Lead Data').item.json.last_name }}",
+          "phoneNumber": "={{ $('Normalize & Clean Lead Data').item.json.phone }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        -816
+      ],
+      "id": "af9afe02-9d30-4b07-9f5f-4ea9704fbc50",
+      "name": "Update Existing Contact in HubSpot",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "hubspotAppToken": {
+          "name": "HubSpot Service Key account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "B2B Lead Audit Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ViCUVVpWMuKbgm5FkO7YeqBAwMmi73I8AhXaeTy8uwk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('If: Is Lead HOT?').item.json.lead_id }}",
+            "Full Name": "={{ $('If: Is Lead HOT?').item.json.full_name }}",
+            "Email": "={{ $('If: Is Lead HOT?').item.json.email }}",
+            "Company Name": "={{ $('If: Is Lead HOT?').item.json.company_name }}",
+            "Lead Score": "={{ $('If: Is Lead HOT?').item.json.lead_score }}",
+            "Lead Tier": "={{ $('If: Is Lead HOT?').item.json.lead_tier }}",
+            "Lead Stage": "={{ $('If: Is Lead HOT?').item.json.lead_stage }}",
+            "HubSpot ID": "={{ $('Create Contact in HubSpot').item.json['portal-id'] }}",
+            "Processed At": "={{ $('Parse AI Response & Merge Lead Payload').item.json.received_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Tier",
+              "displayName": "Lead Tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Stage",
+              "displayName": "Lead Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "HubSpot ID",
+              "displayName": "HubSpot ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Processed At",
+              "displayName": "Processed At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3104,
+        -624
+      ],
+      "id": "229daecf-e47f-487f-ac8e-51594f04c1db",
+      "name": "Log to Master Google Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "Google Sheets account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        -64
+      ],
+      "id": "afb55013-cb96-4cea-9bc6-f401833bebde",
+      "name": "Catch Workflow Errors"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $input.first().json;\n\nreturn [{\n  json: {\n    failed_node: errorData.execution?.lastNodeExecuted || \"Unknown Node\",\n    error_message: errorData.execution?.error?.message || \"No error message provided\",\n    execution_id: errorData.execution?.id || \"N/A\",\n    execution_url: errorData.execution?.url || \"\",\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        -64
+      ],
+      "id": "46fda20f-73a8-4070-8485-617c0161784b",
+      "name": "Format Error Details"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@example.com",
+        "subject": "=🚨 WORKFLOW ERROR ALERT: Node {{ $json.failed_node }} Failed!",
+        "emailType": "text",
+        "message": "=<h3>⚠️ Workflow Execution Error Detected</h3> <p><strong>Failed Node:</strong> {{ $json.failed_node }}</p> <p><strong>Error Message:</strong> {{ $json.error_message }}</p> <p><strong>Execution ID:</strong> {{ $json.execution_id }}</p> <p><strong>Timestamp:</strong> {{ $json.timestamp }}</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1536,
+        -64
+      ],
+      "id": "a8ebb11b-af09-4d31-9be8-2cfd2ad77465",
+      "name": "Send Emergency Tech Alert",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "DLQ_Errors",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1kQZ94Nt_fPas--2OQzTMkv4ZD9gPhCU4BJhI3ql9MpE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Failed Node": "={{ $('Format Error Details').item.json.failed_node }}",
+            "Error Details": "={{ $('Format Error Details').item.json.error_message }}",
+            "Execution ID": "={{ $('Format Error Details').item.json.execution_id }}",
+            "Timestamp": "={{ $('Format Error Details').item.json.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Failed Node",
+              "displayName": "Failed Node",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error Details",
+              "displayName": "Error Details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Execution ID",
+              "displayName": "Execution ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        -64
+      ],
+      "id": "fb64846c-fb13-4d75-94a9-0d6e88e2710a",
+      "name": "Log Error to DLQ Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "Google Sheets account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "YOUR_SLACK_CHANNEL_ID",
+          "mode": "list",
+          "cachedResultName": "all-b2b-lead-automation"
+        },
+        "text": "=🔥 *NEW HOT LEAD ALERT* 🔥\n*Name:* \n*Company:* {{ $json.enriched_company_name }}\n*AI Score:* {{ $json.lead_score }}/100\n*Reason:* {{ $json.qualification_reason }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        3072,
+        -928
+      ],
+      "id": "de637398-4af8-46bc-8813-43d75bb52ac6",
+      "name": "Post Interactive Slack Notification",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "slackOAuth2Api": {
+          "name": "Slack account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "engagement",
+        "type": "email",
+        "metadata": {},
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        3264,
+        -944
+      ],
+      "id": "25abae3b-5829-43bd-b166-85d1713d0f21",
+      "name": "Create Sales Task in HubSpot",
+      "credentials": {
+        "hubspotAppToken": {
+          "name": "HubSpot Service Key account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\nconst baseUrl = \"https://calendly.com/YOUR_CALENDLY_SLUG/discovery\";\n\n// Pre-fill Calendly URL parameters with lead details\nconst bookingUrl = `${baseUrl}?name=${encodeURIComponent(lead.full_name)}&email=${encodeURIComponent(lead.email)}`;\n\nreturn [{\n  json: {\n    ...lead,\n    booking_url: bookingUrl\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        -944
+      ],
+      "id": "cfc94a96-239b-4a2a-b300-e4a935f2679d",
+      "name": "Generate Dynamic Calendly Link"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "company",
+        "operation": "getAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        -816
+      ],
+      "id": "0c8cd60e-4c2e-48c6-81cb-e08e6bf1853f",
+      "name": "Fetch CRM Activity History",
+      "credentials": {
+        "hubspotAppToken": {
+          "name": "HubSpot Service Key account (YOUR_CREDENTIAL)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\nconst oldScore = lead.previous_score || 30;\nconst newScore = Math.min(100, oldScore + 25);\n\nreturn [{\n  json: {\n    ...lead,\n    re_engagement_score: newScore,\n    is_reactivated: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        -816
+      ],
+      "id": "4db63db4-0203-4f87-8391-51c856dd591a",
+      "name": "Calculate Re-engagement Score"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        -624
+      ],
+      "id": "61bc1223-9306-4d53-b281-e66eb8897a12",
+      "name": "Update Real-time Metrics Counter"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@example.com",
+        "subject": "Daily Executive Summary",
+        "message": "update",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3712,
+        -912
+      ],
+      "id": "1aec7f19-4bda-4b5d-b059-d87251414388",
+      "name": "Send Daily Executive Summary",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account (YOUR_CREDENTIAL)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Receive New Lead": {
+      "main": [
+        [
+          {
+            "node": "Generate Unique Lead ID & Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Unique Lead ID & Metadata": {
+      "main": [
+        [
+          {
+            "node": "Structure & Flatten Lead Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure & Flatten Lead Payload": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Clean Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Clean Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Validate Email Regex & Extract Domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Email Regex & Extract Domain": {
+      "main": [
+        [
+          {
+            "node": "Filter Invalid Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Invalid Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Search HubSpot Contact by Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Flag Invalid Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search HubSpot Contact by Email": {
+      "main": [
+        [
+          {
+            "node": "If: Contact Exists in CRM?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If: Contact Exists in CRM?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Contact in HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare New Lead Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare New Lead Payload": {
+      "main": [
+        [
+          {
+            "node": "Fetch Company Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Company Info": {
+      "main": [
+        [
+          {
+            "node": "Merge Enriched Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Enriched Data": {
+      "main": [
+        [
+          {
+            "node": "Qualify & Score Lead with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qualify & Score Lead with AI": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response & Merge Lead Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response & Merge Lead Payload": {
+      "main": [
+        [
+          {
+            "node": "If: Is Lead HOT?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If: Is Lead HOT?": {
+      "main": [
+        [
+          {
+            "node": "Create Contact in HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If: Is Lead WARM?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Contact in HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Send Instant Sales Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Instant Sales Alert": {
+      "main": [
+        [
+          {
+            "node": "Post Interactive Slack Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Master Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If: Is Lead WARM?": {
+      "main": [
+        [
+          {
+            "node": "Send Warm Nurture Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Cold Courtesy Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Existing Contact in HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Fetch CRM Activity History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Master Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Update Real-time Metrics Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catch Workflow Errors": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Send Emergency Tech Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Emergency Tech Alert": {
+      "main": [
+        [
+          {
+            "node": "Log Error to DLQ Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Interactive Slack Notification": {
+      "main": [
+        [
+          {
+            "node": "Create Sales Task in HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Sales Task in HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Generate Dynamic Calendly Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Dynamic Calendly Link": {
+      "main": [
+        [
+          {
+            "node": "Send Daily Executive Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch CRM Activity History": {
+      "main": [
+        [
+          {
+            "node": "Calculate Re-engagement Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  }
+}
